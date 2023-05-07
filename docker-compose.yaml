@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  #################################
+  #         AIRFLOW SETUP         #
+  #################################
+
+  airflow:
+    image: apache/airflow:2.3.3
+    environment:
+      AIRFLOW__CORE__LAZY_LOAD_PLUGINS: 'false'
+      AIRFLOW__WEBSERVER__RELOAD_ON_PLUGIN_CHANGE: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    #   AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
+    #   _AIRFLOW_WWW_USER_CREATE: 'true'
+    #   _AIRFLOW_WWW_USER_USERNAME: airflow
+    #   _AIRFLOW_WWW_USER_PASSWORD: airflow
+      PIZZERIA_WEBSERVER: 'pizzeria-webserver:3000'
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      # - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    command: standalone
+    ports:
+      - 6060:8080
+    restart: always
+
+  #################################
+  #         PIZZERIA SETUP        #
+  #################################
+
+  postgres-pizzeria:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: pizzeria
+      POSTGRES_PASSWORD: pizzeria
+      POSTGRES_DB: pizzeria
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "pizzeria" ]
+      interval: 5s
+      retries: 5
+    restart: always
+
+  pizzeria-webserver:
+    ports:
+      - 3000:3000
+    environment:
+      DATABASE_URL: "postgresql://pizzeria:pizzeria@postgres-pizzeria/pizzeria"
+    image: ngelders/dataroots-pizzeria:multi-v3
+    depends_on:
+      - postgres-pizzeria
+
+  oven-deliver:
+    image: alpine/curl
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        while true
+        do
+          curl -X 'POST' 'http://pizzeria-webserver:3000/api/pizza/oven' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"backend_secret": "DATAROOTS-PIZZERIA-123"}'
+          curl -X 'POST' 'http://pizzeria-webserver:3000/api/pizza/deliver' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"backend_secret": "DATAROOTS-PIZZERIA-123"}'
+          sleep 5
+        done
