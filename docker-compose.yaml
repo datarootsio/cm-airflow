@@ -11,17 +11,14 @@ services:
       AIRFLOW__CORE__LAZY_LOAD_PLUGINS: 'false'
       AIRFLOW__WEBSERVER__RELOAD_ON_PLUGIN_CHANGE: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    #   AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
-    #   _AIRFLOW_WWW_USER_CREATE: 'true'
-    #   _AIRFLOW_WWW_USER_USERNAME: airflow
-    #   _AIRFLOW_WWW_USER_PASSWORD: airflow
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: '30'
       PIZZERIA_WEBSERVER: 'pizzeria-webserver:3000'
 
     volumes:
       - ./dags:/opt/airflow/dags
       # - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
-    command: standalone
+    entrypoint: /bin/sh -c "airflow db init && airflow users create --username airflow --password airflow --firstname airflow --lastname airflow --role Admin --email admin@example.org && /usr/bin/dumb-init -- /entrypoint standalone"
     ports:
       - 6060:8080
     restart: always

@@ -1,11 +1,15 @@
-# Create deferrable RandomSensor
-# The sensor is set to ‘done’ if a random
-# number between 0..1 is lower than a given chance
+from pendulum import datetime
 
-# psuedo code:
-# while chance < random.random():
-#     (sleep here)
-# (set to done here)
+from airflow import DAG
 
-# doc: https://airflow.apache.org/docs/apache-airflow/stable/concepts/deferring.html
-# check the triggerer container logs
+from pizzeria_plugin.deferrable_operator import RandomSensor
+
+
+with DAG(
+    "exercise-6",
+    schedule_interval=None,
+    start_date=datetime(2022, 1, 1),
+    catchup=False,
+) as dag:
+    RandomSensor(task_id="random-1", chance=0.1)
+    RandomSensor(task_id="random-2", chance=0.2)
